@@ -1,82 +1,76 @@
 
 
+const NOMINALS: [u32;3] = [10, 5, 2];
+
 
 fn main() {
-    let val = 17;
-    let combinations: Vec<Vec<u32>> = vec![];
+    let value = 100;
 
-    let nominals = [10, 5, 2];
+    if let Some(main_node) = Node::new(std::u32::MAX, value) {
+        main_node.print();
+    } else {
+        println!("Nie da się podzielić tej liczby na nominały");
+    }
 
 
-    let temp: Vec<u32> = vec![];
-    'main: loop {
-        let mut combination = vec![];
-        let mut n = val;
-        //let mut res = step(10, combination, n);
-        let mut current_nominal = nominals.iter().peekable();
-        loop {
-            match step(**current_nominal.peek().unwrap(), &mut combination, n) {
-                Step::Continue((Some(combination), remainder)) => {
-                    n = remainder;
-                    println!("{}: {:?}", remainder, combination);
-                },
-                Step::Continue((None, remainder)) => {
+}
 
-                },
-                Step::DowngradeNominal(nominal) => {
-                    current_nominal.next();
-                    println!("lol");
-                },
-                Step::Impossible => {
-                    break 'main;
+
+#[derive(Debug)]
+struct Node {
+    value: u32,
+    nodes: Vec<Option<Node>>,
+}
+
+impl Node {
+    fn new(value: u32, remainder: u32) -> Option<Self> {
+        let mut vec: Vec<Option<Node>> = Vec::with_capacity(NOMINALS.len());
+        if remainder == 0 {
+            Some(Node {
+                value,
+                nodes: vec![],
+            })
+        } else {
+            let mut iter = NOMINALS.iter().cloned();
+            for nom in iter.by_ref() {
+                if nom > value {
+                    vec.push(None);                                      
+                } else if *NOMINALS.last()? == nom &&
+                           remainder % nom != 0 {
+                    vec.push(None);
+                } else if let Some(subtraction) = remainder.checked_sub(nom) {
+                    vec.push(Node::new(nom, subtraction));
+                } else {
+                    vec.push(None);
                 }
             }
+            if !vec.iter().filter(|option| option.is_some()).next().is_some() {
+                return None
+            }
+            Some(Node {
+                value: value,
+                nodes: vec,
+            })
         }
     }
-
-    println!("Hello, world!");
-}
-
-fn step(nom: u32, sumof: &mut Vec<u32>, mut num: u32) -> Step {
-    if num == 0 {
-        return Step::Impossible;
+    fn print(&self) {
+        let vec = Vec::new();
+        self.print_recursively(vec, 0);
     }
-
-    if num.checked_sub(nom).is_some() {
-        num = num - nom;
-        sumof.push(nom);
-    } else {
-        return Step::DowngradeNominal(nom);
-    }
-    
-    Step::Continue((Some(sumof.to_vec()), num))
-}
-
-//10 5 2
-//5 5 5 2
-//5 2 2 2 2 2 2
-#[derive(Debug)]
-enum Step {
-    Continue((Option<Vec<u32>>, u32)),
-    DowngradeNominal(u32),
-    //CannotProceed,
-    //BranchLower((Option<Vec<u32>>, u32)),
-    Impossible,
-}
-
-struct Node<T> {
-    value: T,
-    nodes: Vec<Node<T>>,
-}
-
-impl<T> Node<T> {
-    fn new(value: T) -> Self {
-        Node {
-            value,
-            nodes: vec![],
+    fn print_recursively(&self, mut path: Vec<u32>, mut path_len: usize) {
+        path.resize_with(path_len+1, || 0 );
+        if self.value != std::u32::MAX {
+            path[path_len] = self.value;
+            path_len += 1;
         }
-    }
-    fn add_node(&mut self, node: Node<T>) {
-        self.nodes.push(node);
+        if self.nodes.is_empty() {
+            path.iter().take(path_len).for_each(|i| print!("{} ", i));
+            println!("");
+        } else {
+            for node in self.nodes.iter().filter(|a| a.is_some()).map(|a| a.as_ref().unwrap()) {
+                node.print_recursively(path.clone(), path_len);
+            }
+        }
+
     }
 }
